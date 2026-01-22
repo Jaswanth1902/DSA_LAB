@@ -330,18 +330,17 @@ def decompress_file(input_file, output_file):
         
 
 
-        print(f"Decompressing... Mode: {'LZW+Huffman' if flag else 'Huffman Only'}")
-        
-        # Step 1: Huffman
-        huffman_decoded_data = huffman_decompress_bytes(f)
-        
-        final_data = b""
-        
         if flag == 1:
             # Step 2: LZW
+            huffman_decoded_data = huffman_decompress_bytes(f)
             final_data = lzw_decompress(huffman_decoded_data)
+        elif flag == 0:
+            final_data = huffman_decompress_bytes(f)
+        elif flag == 2:
+            # Identity Mode (Raw)
+            final_data = f.read()
         else:
-            final_data = huffman_decoded_data
+            raise ValueError(f"Unknown compression flag: {flag}")
             
         with open(output_file, 'wb') as out:
             out.write(final_data)

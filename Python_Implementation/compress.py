@@ -8,7 +8,7 @@ from collections import Counter
 
 # --- LZW Compression (Optimized with Integer Trie) ---
 
-def lzw_compress(data):
+def lzw_compress(data, return_dict=False):
     """
     Compresses a bytes object using LZW with Integer-based Dictionary.
     Returns a bytes object representing a list of 16-bit integers.
@@ -52,8 +52,16 @@ def lzw_compress(data):
             
     # Output the last code
     result.append(w)
+    
+    packed_data = struct.pack(f'<{len(result)}H', *result)
+    
+    if return_dict:
+        # Convert dictionary to a readable format (string representations)
+        readable_dict = {str(k): v for k, v in dictionary.items()}
+        # Also include initial 0-255 characters symbolically
+        return packed_data, readable_dict
         
-    return struct.pack(f'<{len(result)}H', *result)
+    return packed_data
 
 
 # --- Huffman Compression (Optimized) ---
@@ -192,22 +200,96 @@ def compress_file(input_file, output_file):
     if original_size == 0:
         return None
 
-    # Smart Check
+    # Step 1: Try LZW
     lzw_data = lzw_compress(raw_data)
     lzw_size = len(lzw_data)
     
     use_lzw = (lzw_size < original_size)
-    final_source_data = lzw_data if use_lzw else raw_data
+    hybrid_source_data = lzw_data if use_lzw else raw_data
     
-    # print(f"Mode: {'LZW' if use_lzw else 'Raw'}")
+    # Step 2: Huffman
+    huffman_output, tree_data = huffman_compress_bytes_with_tree(hybrid_source_data)
     
-    huffman_output, tree_data = huffman_compress_bytes_with_tree(final_source_data)
+    # Step 3: Compare with Original
+    # flag byte (1) + huffman_output
+    final_compressed_size = len(huffman_output) + 1
     
     with open(output_file, 'wb') as out:
-        out.write(b'\x01' if use_lzw else b'\x00')
-        out.write(huffman_output)
+        if final_compressed_size < original_size:
+            # Compression is efficient
+            out.write(b'\x01' if use_lzw else b'\x00')
+            out.write(huffman_output)
+        else:
+            # Fallback to Identity (Raw)
+            # Use flag \x02 to indicate raw data
+            out.write(b'\x02')
+            out.write(raw_data)
 
     return tree_data
+
+def huffman_compress_only(data):
+    """Convenience function for simulation."""
+    output, tree = huffman_compress_bytes_with_tree(data)
+    return len(output), tree
+
+def lzw_compress_only(data, return_dict=False):
+    """Convenience function for simulation."""
+    if return_dict:
+        output, dictionary = lzw_compress(data, return_dict=True)
+        return output, dictionary
+    output = lzw_compress(data)
+    return output
+
+def simulate_all(text_input):
+    """
+    Performs LZW, Huffman, and Hybrid compression on the input text.
+    Returns comparison metrics.
+    """
+    if isinstance(text_input, str):
+        data = text_input.encode('utf-8')
+    else:
+        data = text_input
+
+    original_size = len(data)
+    if original_size == 0:
+        return None
+
+    # 1. Huffman Only
+    huff_size, huff_tree = huffman_compress_only(data)
+
+    # 2. LZW Only
+    lzw_data_standalone, lzw_dict = lzw_compress_only(data, return_dict=True)
+    lzw_size = len(lzw_data_standalone)
+
+    # 3. Hybrid (Existing Logic)
+    lzw_data_temp = lzw_compress(data)
+    use_lzw = (len(lzw_data_temp) < original_size)
+    hybrid_source = lzw_data_temp if use_lzw else data
+    hybrid_huff_output, hybrid_tree = huffman_compress_bytes_with_tree(hybrid_source)
+    hybrid_size = len(hybrid_huff_output) + 1 # +1 for the flag byte
+
+    # Guaranteed Smallest (Our refinement)
+    smallest_size = min(huff_size + 1, hybrid_size) # +1 for flag \x00
+    is_raw_best = (original_size <= smallest_size)
+    
+    if is_raw_best:
+        smallest_size = original_size + 1 # +1 for flag \x02
+        best_mode = "Identity (Raw)"
+    else:
+        best_mode = "Hybrid" if hybrid_size <= (huff_size + 1) else "Huffman Only"
+
+    return {
+        "original": original_size,
+        "huffman": huff_size,
+        "huffman_tree": huff_tree,
+        "lzw": lzw_size,
+        "lzw_dict": lzw_dict,
+        "hybrid": hybrid_size,
+        "hybrid_tree": hybrid_tree,
+        "lzw_used_in_hybrid": use_lzw,
+        "best_possible": min(original_size + 1, smallest_size),
+        "best_mode": best_mode
+    }
 
 if __name__ == "__main__":
     if len(sys.argv) < 3:

@@ -26,19 +26,21 @@
 body {
     background-color: var(--bg);
     color: var(--text-main);
-    min-height: 100vh;
+    height: 100vh;
     display: flex;
     justify-content: center;
     align-items: center;
-    overflow-x: hidden;
+    overflow: hidden;
     position: relative;
 }
 
 /* Backgrounds */
 .background-grid {
     position: absolute;
-    width: 200%;
-    height: 200%;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
     background-image:
         linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
         linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
@@ -83,9 +85,12 @@ body {
 .container {
     width: 100%;
     max-width: 1000px;
-    padding: 2rem;
+    padding: 1rem 2rem;
     position: relative;
     z-index: 10;
+    max-height: 100vh;
+    display: flex;
+    flex-direction: column;
 }
 
 header {
@@ -143,13 +148,11 @@ header {
 }
 
 .panel {
-    background: var(--panel-bg);
-    backdrop-filter: blur(12px);
-    border: 1px solid var(--border);
-    border-radius: 20px;
-    padding: 2rem;
+    padding: 1.5rem;
     display: flex;
     flex-direction: column;
+    max-height: 600px;
+    overflow-y: auto;
 }
 
 /* Controls */
@@ -282,7 +285,7 @@ header {
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    min-height: 250px;
+    height: 350px;
 }
 
 .console-header {

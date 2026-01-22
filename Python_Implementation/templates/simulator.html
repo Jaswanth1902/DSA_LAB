@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Compression Simulator | DSA EL</title>
+    <!-- CSS Link -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- D3.js for Tree -->
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <!-- Material Icons -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+    <!-- Fonts -->
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;700&family=Fira+Code:wght@400;500&display=swap"
+        rel="stylesheet">
+    <style>
+        .simulator-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+        }
+
+        .input-panel {
+            flex: 1;
+        }
+
+        .text-input-area {
+            width: 100%;
+            height: 300px;
+            background: var(--console-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1rem;
+            color: #a5b4fc;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.9rem;
+            resize: none;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .text-input-area:focus {
+            border-color: var(--primary);
+        }
+
+        .comparison-card {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 12px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border-left: 4px solid transparent;
+        }
+
+        .card-huffman { border-left-color: #3b82f6; }
+        .card-lzw { border-left-color: #10b981; }
+        .card-hybrid { border-left-color: var(--accent); }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .card-title {
+            font-weight: 700;
+            font-size: 1rem;
+            color: var(--text-main);
+        }
+
+        .card-size {
+            font-family: 'Fira Code', monospace;
+            font-weight: 500;
+            color: var(--accent);
+        }
+
+        .card-ratio {
+            font-size: 0.8rem;
+            color: var(--text_muted);
+        }
+
+        .back-link {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--text-muted);
+            text-decoration: none;
+            margin-bottom: 1rem;
+            font-size: 0.9rem;
+            transition: color 0.2s;
+        }
+
+        .back-link:hover {
+            color: var(--text-main);
+        }
+
+        .chart-box {
+            background: var(--console-bg);
+            border-radius: 12px;
+            padding: 1.5rem;
+            border: 1px solid var(--border);
+            margin-top: 1rem;
+        }
+
+        .tab-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+            border-bottom: 2px solid transparent;
+        }
+
+        .tab-btn.active {
+            color: var(--accent);
+            border-bottom-color: var(--accent);
+        }
+
+        .node circle {
+            fill: var(--primary);
+            stroke: var(--accent);
+            stroke-width: 2px;
+        }
+
+        .node text {
+            font: 10px 'Fira Code', monospace;
+            fill: #fff;
+        }
+
+        .link {
+            fill: none;
+            stroke: rgba(255, 255, 255, 0.1);
+            stroke-width: 1px;
+        }
+
+        #lzwDictBody tr:hover {
+            background: rgba(255,255,255,0.05);
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Background Elements -->
+    <div class="background-grid"></div>
+    <div class="background-globes">
+        <div class="globe g1"></div>
+        <div class="globe g2"></div>
+    </div>
+
+    <div class="container" style="max-width: 1200px;">
+        <!-- Header -->
+        <header>
+            <a href="/" class="back-link">
+                <span class="material-icons-round">arrow_back</span> Back to Dashboard
+            </a>
+            <div class="brand-section">
+                <span class="material-icons-round logo-icon">insights</span>
+                <div class="title-group">
+                    <h1>Algorithm Simulator</h1>
+                </div>
+            </div>
+            <p class="tagline">Real-time comparison: Huffman vs LZW vs Hybrid</p>
+        </header>
+
+        <div class="simulator-grid">
+            <!-- Left Side: Input -->
+            <div class="panel input-panel">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    <h3>Text Input</h3>
+                    <span id="charCount" class="text-muted" style="font-size: 0.8rem;">0 bytes</span>
+                </div>
+                <textarea id="simulatorInput" class="text-input-area" placeholder="Enter text here to see real-time compression results..."></textarea>
+                
+                <div style="margin-top: 1.5rem;">
+                    <button class="btn btn-secondary" id="clearBtn" style="width: auto; padding: 0.5rem 1rem;">
+                        <span class="material-icons-round">delete_outline</span> Clear
+                    </button>
+                    <button class="btn btn-primary" id="sampleBtn" style="width: auto; padding: 0.5rem 1rem; margin-left: 0.5rem;">
+                        <span class="material-icons-round">auto_fix_high</span> Load Sample
+                    </button>
+                </div>
+            </div>
+
+            <!-- Right Side: Visualization -->
+            <div class="panel viz-panel">
+                <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem;">
+                    <button class="tab-btn active" data-tab="huffman">Huffman Tree</button>
+                    <button class="tab-btn" data-tab="lzw">LZW Dict</button>
+                </div>
+                
+                <div id="huffmanTab" class="tab-content">
+                    <div id="huffmanTreeContainer" style="width: 100%; height: 400px; overflow: auto; background: rgba(0,0,0,0.2); border-radius: 12px; border: 1px solid var(--border);">
+                         <!-- SVG will be injected here -->
+                    </div>
+                    <div class="text-muted" style="font-size: 0.7rem; margin-top: 0.5rem;">
+                        * Scroll/Drag to pan. Hover nodes for frequencies.
+                    </div>
+                </div>
+
+                <div id="lzwTab" class="tab-content" style="display: none;">
+                    <div id="lzwDictContainer" style="width: 100%; height: 400px; overflow-y: auto; background: rgba(0,0,0,0.2); border-radius: 12px; border: 1px solid var(--border); padding: 1rem;">
+                        <table style="width: 100%; font-family: 'Fira Code', monospace; font-size: 0.8rem; border-collapse: collapse;">
+                            <thead style="position: sticky; top: -1rem; background: var(--panel-bg); color: var(--accent);">
+                                <tr>
+                                    <th style="text-align: left; padding: 0.5rem; border-bottom: 1px solid var(--border);">Sequence (Key)</th>
+                                    <th style="text-align: right; padding: 0.5rem; border-bottom: 1px solid var(--border);">Code</th>
+                                </tr>
+                            </thead>
+                            <tbody id="lzwDictBody">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Script at the end -->
+    <script src="{{ url_for('static', filename='js/simulator.js') }}"></script>
+</body>
+
+</html>

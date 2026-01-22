@@ -117,6 +117,9 @@ async function processFile(mode) {
             log(`Error: ${result.error}`, 'error');
             alert(result.error);
         } else {
+            if (result.is_identity) {
+                log("Note: File appears incompressible (e.g. already a .docx/zip). Stored in Identity Mode to prevent size explosion.", 'info');
+            }
             log(mode === 'compress' ? "Optimization Success." : "Restoration Success.");
             displayResults(result);
             downloadFile(result.download_url, result.filename);
@@ -155,7 +158,7 @@ function renderChart(original, processed) {
     sizeChart = new Chart(ctx, {
         type: 'bar',
         data: {
-            labels: ['Original', 'DSA EL'],
+            labels: ['Original', 'Compressed'],
             datasets: [{
                 label: 'Size (Bytes)',
                 data: [original, processed],

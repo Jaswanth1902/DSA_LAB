@@ -108,18 +108,35 @@ def process():
 
         processed_size = os.path.getsize(output_path)
         
+        # Determine if it was Identity Mode
+        is_identity = (processed_size == original_size + 1)
+        
         return jsonify({
             'original_size': original_size,
             'processed_size': processed_size,
             'filename': output_filename,
             'download_url': f'/download/{output_filename}',
             'tree_data': tree_data,
-            # 'byte_stream': debug_info 
+            'is_identity': is_identity
         })
 
 @app.route('/download/<filename>')
 def download_file(filename):
     return send_file(os.path.join(app.config['UPLOAD_FOLDER'], filename), as_attachment=True)
+
+@app.route('/simulator')
+def simulator():
+    return render_template('simulator.html')
+
+@app.route('/api/simulate', methods=['POST'])
+def api_simulate():
+    data = request.json
+    text = data.get('text', '')
+    if not text:
+        return jsonify({'error': 'No text provided'}), 400
+    
+    results = compress.simulate_all(text)
+    return jsonify(results)
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)

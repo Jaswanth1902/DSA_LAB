@@ -7,6 +7,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // UI Elements
     const lzwDictBody = document.getElementById('lzwDictBody');
     const treeContainer = document.getElementById('huffmanTreeContainer');
+    const huffmanBinaryOutput = document.getElementById('huffmanBinaryOutput');
+    const lzwCodesOutput = document.getElementById('lzwCodesOutput');
+    const hybridTreeContainer = document.getElementById('hybridTreeContainer');
+    const hybridBinaryOutput = document.getElementById('hybridBinaryOutput');
 
     // Tabs
     const tabBtns = document.querySelectorAll('.tab-btn');
@@ -70,21 +74,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function updateUI(data) {
         // Update Huffman Tree
-        renderHuffmanTree(data.huffman_tree);
+        renderHuffmanTree(data.huffman_tree, data.huffman_binary, "#huffmanTreeContainer", huffmanBinaryOutput);
 
         // Update LZW Dictionary
-        renderLZWDict(data.lzw_dict);
+        renderLZWDict(data.lzw_dict, data.lzw_codes);
+
+        // Update Hybrid Tree
+        renderHuffmanTree(data.hybrid_tree, data.hybrid_binary, "#hybridTreeContainer", hybridBinaryOutput);
     }
 
 
-    function renderHuffmanTree(treeData) {
-        treeContainer.innerHTML = '';
+    function renderHuffmanTree(treeData, binaryStr, containerSelector, outputElement) {
+        const container = document.querySelector(containerSelector);
+        container.innerHTML = '';
+        outputElement.innerText = binaryStr || 'Encoded bits will appear here...';
         if (!treeData) return;
 
-        const width = treeContainer.offsetWidth || 600;
+        const width = container.offsetWidth || 600;
         const height = 400;
 
-        const svg = d3.select("#huffmanTreeContainer")
+        const svg = d3.select(containerSelector)
             .append("svg")
             .attr("width", "100%")
             .attr("height", height)
@@ -118,8 +127,9 @@ document.addEventListener('DOMContentLoaded', () => {
             .text(d => d.data.name || '');
     }
 
-    function renderLZWDict(dict) {
+    function renderLZWDict(dict, codes) {
         lzwDictBody.innerHTML = '';
+        lzwCodesOutput.innerText = codes ? codes.join(', ') : 'Encoded codes will appear here...';
         if (!dict) return;
 
         // Sort by code (value) to show chronological order of addition
@@ -141,6 +151,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function resetUI() {
         lzwDictBody.innerHTML = '';
+        lzwCodesOutput.innerText = 'Encoded codes will appear here...';
         treeContainer.innerHTML = '';
+        huffmanBinaryOutput.innerText = 'Encoded bits will appear here...';
+        hybridTreeContainer.innerHTML = '';
+        hybridBinaryOutput.innerText = 'Encoded bits will appear here...';
     }
 });

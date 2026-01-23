@@ -59,7 +59,7 @@ def lzw_compress(data, return_dict=False):
         # Convert dictionary to a readable format (string representations)
         readable_dict = {str(k): v for k, v in dictionary.items()}
         # Also include initial 0-255 characters symbolically
-        return packed_data, readable_dict
+        return packed_data, readable_dict, result
         
     return packed_data
 
@@ -186,7 +186,13 @@ def huffman_compress_bytes_with_tree(data):
         # Pad with zeros (shift left to align to byte boundary)
         append((buffer_val << (8 - bits_in_buffer)) & 0xFF)
         
-    return output, tree_json
+    # Generate binary string for visualization
+    binary_str = ""
+    for byte_val in data:
+        code, length = codes[byte_val]
+        binary_str += format(code, f'0{length}b')
+
+    return output, tree_json, binary_str
 
 def compress_file(input_file, output_file):
     if not os.path.exists(input_file):
@@ -208,7 +214,7 @@ def compress_file(input_file, output_file):
     hybrid_source_data = lzw_data if use_lzw else raw_data
     
     # Step 2: Huffman
-    huffman_output, tree_data = huffman_compress_bytes_with_tree(hybrid_source_data)
+    huffman_output, tree_data, _ = huffman_compress_bytes_with_tree(hybrid_source_data)
     
     # Step 3: Compare with Original
     # flag byte (1) + huffman_output
@@ -229,14 +235,14 @@ def compress_file(input_file, output_file):
 
 def huffman_compress_only(data):
     """Convenience function for simulation."""
-    output, tree = huffman_compress_bytes_with_tree(data)
-    return len(output), tree
+    output, tree, binary_str = huffman_compress_bytes_with_tree(data)
+    return len(output), tree, binary_str
 
 def lzw_compress_only(data, return_dict=False):
     """Convenience function for simulation."""
     if return_dict:
-        output, dictionary = lzw_compress(data, return_dict=True)
-        return output, dictionary
+        output, dictionary, codes = lzw_compress(data, return_dict=True)
+        return output, dictionary, codes
     output = lzw_compress(data)
     return output
 
@@ -255,18 +261,19 @@ def simulate_all(text_input):
         return None
 
     # 1. Huffman Only
-    huff_size, huff_tree = huffman_compress_only(data)
+    huff_size, huff_tree, huff_binary = huffman_compress_only(data)
 
     # 2. LZW Only
-    lzw_data_standalone, lzw_dict = lzw_compress_only(data, return_dict=True)
+    lzw_data_standalone, lzw_dict, lzw_codes = lzw_compress_only(data, return_dict=True)
     lzw_size = len(lzw_data_standalone)
 
-    # 3. Hybrid (Existing Logic)
+    # 3. Hybrid (Forced Logic for Simulator)
+    # For simulation, we force LZW -> Huffman sequence even if inefficient.
     lzw_data_temp = lzw_compress(data)
-    use_lzw = (len(lzw_data_temp) < original_size)
-    hybrid_source = lzw_data_temp if use_lzw else data
-    hybrid_huff_output, hybrid_tree = huffman_compress_bytes_with_tree(hybrid_source)
+    hybrid_source = lzw_data_temp 
+    hybrid_huff_output, hybrid_tree, hybrid_binary = huffman_compress_bytes_with_tree(hybrid_source)
     hybrid_size = len(hybrid_huff_output) + 1 # +1 for the flag byte
+    use_lzw = True
 
     # Guaranteed Smallest (Our refinement)
     smallest_size = min(huff_size + 1, hybrid_size) # +1 for flag \x00
@@ -282,10 +289,13 @@ def simulate_all(text_input):
         "original": original_size,
         "huffman": huff_size,
         "huffman_tree": huff_tree,
+        "huffman_binary": huff_binary,
         "lzw": lzw_size,
         "lzw_dict": lzw_dict,
+        "lzw_codes": lzw_codes,
         "hybrid": hybrid_size,
         "hybrid_tree": hybrid_tree,
+        "hybrid_binary": hybrid_binary,
         "lzw_used_in_hybrid": use_lzw,
         "best_possible": min(original_size + 1, smallest_size),
         "best_mode": best_mode

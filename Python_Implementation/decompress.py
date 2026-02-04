@@ -2,6 +2,7 @@ import heapq
 import sys
 import struct
 import os
+import lzma
 
 # --- Huffman Decompression ---
 
@@ -339,6 +340,10 @@ def decompress_file(input_file, output_file):
         elif flag == 2:
             # Identity Mode (Raw)
             final_data = f.read()
+        elif flag == 3:
+            # LZMA Mode
+            compressed_data = f.read()
+            final_data = lzma.decompress(compressed_data)
         else:
             raise ValueError(f"Unknown compression flag: {flag}")
             

@@ -74,7 +74,8 @@ def process():
         if mode == 'compress':
             try:
                 # Get Tree Data here
-                base_name = os.path.splitext(filename)[0] + '.lzh'
+                # Preserve original extension so we can restore it properly
+                base_name = filename + '.lzh'
                 output_path = os.path.join(app.config['UPLOAD_FOLDER'], base_name)
                 tree_data = compress.compress_file(input_path, output_path)
                 update_stats('compress')
@@ -84,10 +85,13 @@ def process():
                 return jsonify({'error': str(e)})
                 
         elif mode == 'decompress':
-            # ... existing decompress logic ...
-            output_filename = filename + '.restored'
-            if filename.endswith('.lzh') or filename.endswith('.bin'):
-                 output_filename = os.path.splitext(filename)[0]
+            # Preserve original filename by stripping the .lzh suffix
+            if filename.endswith('.lzh'):
+                output_filename = filename[:-4]
+            elif filename.endswith('.bin'):
+                 output_filename = filename[:-4]
+            else:
+                output_filename = filename + '.restored'
             
             output_path = os.path.join(app.config['UPLOAD_FOLDER'], output_filename)
             
